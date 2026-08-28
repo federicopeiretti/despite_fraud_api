@@ -13,7 +13,7 @@ def snv(X):
 
 def preprocess_nir(absorbance: list[float]) -> np.ndarray:
     """
-    Applies Savitzky-Golay filter (window_length=9, polyorder=2, deriv=2)
+    Apply Savitzky-Golay filter (window_length=9, polyorder=2, deriv=2)
     followed by SNV normalization.
     Expects a single spectrum as a list of floats.
     Returns a 2D NumPy array of shape (1, features).
