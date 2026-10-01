@@ -1,13 +1,15 @@
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from app.schemas import PredictRequest, PredictResponse
 from app.inference import run_inference
+from app.auth import verify_token
 
 app = FastAPI(
     title="despite_fraud_API",
-    description="REST API per l'inferenza su dati spettroscopici NIR",
-    version="1.0.0"
+    description="REST API per l'inferenza su dati spettroscopici NIR e Raman",
+    version="1.0.0",
+    dependencies=[Depends(verify_token)]
 )
 
 # Custom handler for Pydantic validation errors

@@ -3,6 +3,9 @@ import os
 # Base directories
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+# Authentication
+API_BEARER_TOKEN = os.getenv("API_BEARER_TOKEN", "despite_fraud_secret_token_2026")
+
 # Centralized configuration of supported parameters
 SUPPORTED_INSTRUMENTS = {"nir", "raman"}
 SUPPORTED_ANIMALS = {"pesce", "carne"}

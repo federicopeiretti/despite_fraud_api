@@ -1,9 +1,12 @@
 import numpy as np
 from fastapi.testclient import TestClient
 from app.main import app
+from app.config import API_BEARER_TOKEN
 from app.model_loader import model_manager
 
 client = TestClient(app)
+# Imposta l'header Bearer token valido di default per i test funzionali
+client.headers = {"Authorization": f"Bearer {API_BEARER_TOKEN}"}
 
 def get_valid_payload():
     # A valid payload with a random spectrum of length 125
@@ -29,6 +32,32 @@ def get_valid_raman_payload():
         "shift_raman": shift_raman,
         "arbitrary_units": arbitrary_units
     }
+
+def test_authentication():
+    unauthenticated_client = TestClient(app)
+    payload = get_valid_payload()
+
+    # 1. Richiesta senza header Authorization -> 401
+    res_no_auth = unauthenticated_client.post("/predict", json=payload)
+    assert res_no_auth.status_code == 401
+    assert "token" in res_no_auth.json()["detail"].lower()
+
+    # 2. Richiesta con token errato -> 401
+    res_bad_token = unauthenticated_client.post(
+        "/predict",
+        json=payload,
+        headers={"Authorization": "Bearer token_non_valido"}
+    )
+    assert res_bad_token.status_code == 401
+    assert "token" in res_bad_token.json()["detail"].lower()
+
+    # 3. Richiesta con schema non Bearer -> 401
+    res_bad_scheme = unauthenticated_client.post(
+        "/predict",
+        json=payload,
+        headers={"Authorization": "Basic 123456"}
+    )
+    assert res_bad_scheme.status_code == 401
 
 def test_validation_errors():
     # 1. Test unsupported measurement type

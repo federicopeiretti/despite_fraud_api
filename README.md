@@ -62,9 +62,22 @@ pytest tests/test_api.py -v
 
 ---
 
+## Autenticazione
+
+L'API è protetta a livello globale tramite **Bearer Token**. 
+
+Tutte le richieste devono includere l'header HTTP:
+```http
+Authorization: Bearer $TOKEN
+```
+
+Il token segreto atteso può essere configurato tramite la variabile d'ambiente `API_BEARER_TOKEN` (default per sviluppo: `despite_fraud_secret_token_2026`).
+
+---
+
 ## Esempio
 
-Di seguito viene riportato un esempio di richiesta HTTP POST all'endpoint `/predict` e della risposta restituita dal server.
+Di seguito vengono riportati esempi di richiesta HTTP POST all'endpoint `/predict` e della risposta restituita dal server.
 
 ### Esempi di richiesta (cURL)
 
@@ -73,6 +86,7 @@ Richiesta di inferenza su uno spettro NIR (parametri spettrali: `wavelength` e `
 
 ```bash
 curl -X POST http://127.0.0.1:8000/predict \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "measurement_type": "nir",
@@ -88,6 +102,7 @@ Richiesta di inferenza su uno spettro Raman (parametri spettrali: `shift_raman` 
 
 ```bash
 curl -X POST http://127.0.0.1:8000/predict \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "measurement_type": "raman",
@@ -117,6 +132,7 @@ In caso di successo (HTTP 200 OK), il server restituisce la label del campione c
 | :--- | :--- | :--- | :--- |
 | **`200 OK`** | Successo | Inferenza eseguita con successo | `{"label": "decongelato", "probability": 0.842}` |
 | **`400 Bad Request`** | Richiesta non valida | Parametri o combinazioni non gestibili durante l'inferenza | `{"detail": "Combinazione non supportata: ..."}` |
+| **`401 Unauthorized`** | Non autorizzato | Header `Authorization: Bearer $TOKEN` mancante o token non valido | `{"detail": "Token di autenticazione non valido o mancante."}` |
 | **`404 Not Found`** | Modello non trovato | Specie supportata ma file del modello non presente su disco | `{"detail": "Modello non trovato"}` |
 | **`405 Method Not Allowed`** | Metodo non consentito | Chiamata con metodo HTTP non consentito (es. `GET /predict`) | `{"detail": "Method Not Allowed"}` |
 | **`422 Unprocessable Entity`** | Errore di validazione | Campi mancanti, tipi errati, lunghezze errate o valori non conformi | `{"detail": "Payload non valido: ..."}` |
