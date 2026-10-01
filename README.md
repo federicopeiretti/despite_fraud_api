@@ -1,6 +1,6 @@
 # despite_fraud_API
 
-Servizio REST API realizzato con **FastAPI** per l'inferenza su dati spettroscopici NIR (spettrometria nel vicino infrarosso) per identificare frodi alimentari (pesce fresco vs decongelato).
+Servizio REST API realizzato con **FastAPI** per la classificazione di campioni alimentari tramite l'analisi spettrale chemiometrica e modelli di Machine Learning/Deep Learning. In particolare, per i prodotti ittici distingue il prodotto fresco da quello decongelato, mentre per le carni rileva la presenza di carne separata meccanicamente (CSM). Specifico per spettri acquisiti con strumenti NIR, Raman e SERS.
 
 Il servizio carica i modelli in modalità **lazy loading** con thread-safety (utilizzando il double-checked locking).
 
