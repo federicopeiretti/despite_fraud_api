@@ -18,17 +18,29 @@ def get_valid_payload():
         "absorbance": absorbance
     }
 
+def get_valid_raman_payload():
+    np.random.seed(42)
+    arbitrary_units = np.random.rand(100).tolist()
+    shift_raman = np.linspace(200, 3000, 100).tolist()
+    return {
+        "measurement_type": "raman",
+        "tipo di campione": "pesce",
+        "specie campione": "polpo",
+        "shift_raman": shift_raman,
+        "arbitrary_units": arbitrary_units
+    }
+
 def test_validation_errors():
-    # 1. Test invalid measurement type
+    # 1. Test unsupported measurement type
     payload = get_valid_payload()
-    payload["measurement_type"] = "RAMAN"
+    payload["measurement_type"] = "FTIR"
     response = client.post("/predict", json=payload)
     assert response.status_code == 422
     assert "strumento" in response.json()["detail"].lower()
 
     # 2. Test invalid animal type
     payload = get_valid_payload()
-    payload["tipo di campione"] = "carne"
+    payload["tipo di campione"] = "verdura"
     response = client.post("/predict", json=payload)
     assert response.status_code == 422
     assert "tipo di campione" in response.json()["detail"].lower()
@@ -40,14 +52,29 @@ def test_validation_errors():
     assert response.status_code == 422
     assert "specie" in response.json()["detail"].lower()
 
-    # 4. Test wavelength and absorbance length mismatch
+    # Test species not valid for the specific animal type (e.g. wurstel for pesce)
+    payload_mismatch = get_valid_payload()
+    payload_mismatch["tipo di campione"] = "pesce"
+    payload_mismatch["specie campione"] = "wurstel"
+    response_mismatch = client.post("/predict", json=payload_mismatch)
+    assert response_mismatch.status_code == 422
+    assert "specie" in response_mismatch.json()["detail"].lower()
+
+    # 4. Test NIR missing required fields (wavelength/absorbance)
+    payload = get_valid_payload()
+    del payload["wavelength"]
+    response = client.post("/predict", json=payload)
+    assert response.status_code == 422
+    assert "wavelength" in response.json()["detail"].lower()
+
+    # 5. Test NIR wavelength and absorbance length mismatch
     payload = get_valid_payload()
     payload["wavelength"] = payload["wavelength"][:-1]
     response = client.post("/predict", json=payload)
     assert response.status_code == 422
     assert "lunghezza" in response.json()["detail"].lower() or "vettori" in response.json()["detail"].lower()
 
-    # 5. Test spectrum length not matching 125
+    # 6. Test NIR spectrum length not matching 125
     payload = get_valid_payload()
     payload["wavelength"] = list(range(100))
     payload["absorbance"] = list(range(100))
@@ -55,7 +82,21 @@ def test_validation_errors():
     assert response.status_code == 422
     assert "lunghezza dello spettro" in response.json()["detail"].lower()
 
-    # 6. Test infinite values
+    # 7. Test Raman missing required fields
+    payload_raman = get_valid_raman_payload()
+    del payload_raman["arbitrary_units"]
+    response = client.post("/predict", json=payload_raman)
+    assert response.status_code == 422
+    assert "arbitrary_units" in response.json()["detail"].lower()
+
+    # 8. Test Raman length mismatch
+    payload_raman = get_valid_raman_payload()
+    payload_raman["shift_raman"] = payload_raman["shift_raman"][:-2]
+    response = client.post("/predict", json=payload_raman)
+    assert response.status_code == 422
+    assert "lunghezza" in response.json()["detail"].lower() or "vettori" in response.json()["detail"].lower()
+
+    # 9. Test infinite values
     payload = get_valid_payload()
     payload["absorbance"][0] = "inf"
     response = client.post("/predict", json=payload)
@@ -63,12 +104,26 @@ def test_validation_errors():
     assert "finiti" in response.json()["detail"].lower()
 
 def test_supported_species_missing_model():
-    # Seppia is supported in config, but model file does not exist
+    # NIR with Seppia: supported in config, but model file does not exist
     payload = get_valid_payload()
     payload["specie campione"] = "seppia"
     response = client.post("/predict", json=payload)
     assert response.status_code == 404
-    assert "modello non ancora implementato" in response.json()["detail"].lower()
+    assert "modello non trovato" in response.json()["detail"].lower()
+
+    # Raman with Polpo: supported schema, but model file does not exist yet
+    payload_raman = get_valid_raman_payload()
+    response_raman = client.post("/predict", json=payload_raman)
+    assert response_raman.status_code == 404
+    assert "modello non trovato" in response_raman.json()["detail"].lower()
+
+    # NIR with Wurstel (carne): supported in config, but model file does not exist yet
+    payload_carne = get_valid_payload()
+    payload_carne["tipo di campione"] = "carne"
+    payload_carne["specie campione"] = "wurstel"
+    response_carne = client.post("/predict", json=payload_carne)
+    assert response_carne.status_code == 404
+    assert "modello non trovato" in response_carne.json()["detail"].lower()
 
 def test_polpo_lazy_loading_and_prediction():
     # Make sure cache is clean for the key
@@ -94,6 +149,9 @@ def test_polpo_lazy_loading_and_prediction():
     assert data["label"] in ["fresco", "decongelato"]
     assert isinstance(data["probability"], float)
     assert 0.5 <= data["probability"] <= 1.0
+    # Verifica massimo 3 cifre decimali
+    decimal_part = str(data["probability"]).split(".")[1] if "." in str(data["probability"]) else ""
+    assert len(decimal_part) <= 3
 
     # 4. Send second request (should use cached model, no reload)
     response_cached = client.post("/predict", json=payload)

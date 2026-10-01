@@ -2,16 +2,16 @@
 
 Servizio REST API realizzato con **FastAPI** per l'inferenza su dati spettroscopici NIR (spettrometria nel vicino infrarosso) per identificare frodi alimentari (pesce fresco vs decongelato).
 
-Il servizio carica i modelli in modalità **lazy loading** con thread-safety (utilizzando il double-checked locking) ed esegue il preprocessing dei dati spettroscopici (filtro Savitzky-Golay e normalizzazione SNV) prima dell'inferenza.
+Il servizio carica i modelli in modalità **lazy loading** con thread-safety (utilizzando il double-checked locking).
+
+Viene caricato il modello corretto in base al tipo di strumento chemiometrico (NIR, Raman), alla classe animale (pesce, carne) e alla specie (es. polpo, moscardino, seppia per il pesce; wurstel per la carne) per eseguire l'inferenza sui nuovi spettri. Prima dell'inferenza, viene eseguito il preprocessing dei dati spettroscopici. Successivamente l'inferenza viene eseguita e viene restituita la label del campione con la probabilità che il campione appartenga alla classe predetta (es. `fresco` o `decongelato` per il pesce; `non_csm` o `csm` per la carne).
+
 
 ---
 
 ## Prerequisiti
 
 * Python 3.12 (o compatibile)
-* Scaricare la repo Git `octopus_nir_classification` (https://github.com/federicopeiretti/octopus_nir_classification)
-* Il modello pre-addestrato del polpo deve essere presente nella directory adiacente al percorso:
-  `../octopus_nir_classification/model/cnn/cnn_ensemble.keras`
 
 ---
 
@@ -66,9 +66,10 @@ pytest tests/test_api.py -v
 
 Di seguito viene riportato un esempio di richiesta HTTP POST all'endpoint `/predict` e della risposta restituita dal server.
 
-### Esempio di richiesta (cURL)
+### Esempi di richiesta (cURL)
 
-I vettori `wavelength` e `absorbance` devono avere 125 elementi per lo strumento `nir`.
+#### 1. Spettro NIR
+Richiesta di inferenza su uno spettro NIR (parametri spettrali: `wavelength` e `absorbance`, 125 elementi):
 
 ```bash
 curl -X POST http://127.0.0.1:8000/predict \
@@ -77,43 +78,46 @@ curl -X POST http://127.0.0.1:8000/predict \
     "measurement_type": "nir",
     "tipo di campione": "pesce",
     "specie campione": "polpo",
-    "wavelength": [900.0, 906.45, 912.9, "... (125 elementi in totale)"],
-    "absorbance": [0.3745, 0.9507, 0.7319, "... (125 elementi in totale)"]
+    "wavelength": [900.0, 906.45, 912.9, "..."],
+    "absorbance": [0.3745, 0.9507, 0.7319, "..."]
   }'
 ```
 
-### Esempio di richiesta (Python)
+#### 2. Spettro Raman
+Richiesta di inferenza su uno spettro Raman (parametri spettrali: `shift_raman` e `arbitrary_units`):
 
-Ecco come generare una richiesta valida programmando in Python usando la libreria `requests`:
-
-```python
-import requests
-import numpy as np
-
-# Genera 125 valori fittizi per i vettori di lunghezza d'onda e assorbanza
-wavelength = np.linspace(900, 1700, 125).tolist()
-absorbance = np.random.rand(125).tolist()
-
-payload = {
-    "measurement_type": "nir",
+```bash
+curl -X POST http://127.0.0.1:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{
+    "measurement_type": "raman",
     "tipo di campione": "pesce",
     "specie campione": "polpo",
-    "wavelength": wavelength,
-    "absorbance": absorbance
-}
-
-response = requests.post("http://127.0.0.1:8000/predict", json=payload)
-print(response.json())
+    "shift_raman": [200.0, 210.5, 221.0, "..."],
+    "arbitrary_units": [120.5, 340.2, 510.8, "..."]
+  }'
 ```
 
-### Risposta (JSON)
+### Esempio di risposta (JSON)
 
-In caso di successo (HTTP 200), il server risponde con la classificazione del campione e la probabilità associata:
+In caso di successo (HTTP 200 OK), il server restituisce la label del campione con la probabilità che il campione appartenga alla classe predetta (es. `fresco` o `decongelato` per il pesce; `non_csm` o `csm` per la carne):
 
 ```json
 {
   "label": "decongelato",
-  "probability": 0.8421832084655762
+  "probability": 0.842
 }
 ```
 
+---
+
+## Codici di stato HTTP
+
+| Codice HTTP | Definizione | Descrizione / Causa | Esempio Body Risposta |
+| :--- | :--- | :--- | :--- |
+| **`200 OK`** | Successo | Inferenza eseguita con successo | `{"label": "decongelato", "probability": 0.842}` |
+| **`400 Bad Request`** | Richiesta non valida | Parametri o combinazioni non gestibili durante l'inferenza | `{"detail": "Combinazione non supportata: ..."}` |
+| **`404 Not Found`** | Modello non trovato | Specie supportata ma file del modello non presente su disco | `{"detail": "Modello non trovato"}` |
+| **`405 Method Not Allowed`** | Metodo non consentito | Chiamata con metodo HTTP non consentito (es. `GET /predict`) | `{"detail": "Method Not Allowed"}` |
+| **`422 Unprocessable Entity`** | Errore di validazione | Campi mancanti, tipi errati, lunghezze errate o valori non conformi | `{"detail": "Payload non valido: ..."}` |
+| **`500 Internal Server Error`** | Errore interno | Errore imprevisto durante l'elaborazione o l'inferenza | `{"detail": "Errore interno del server..."}` |

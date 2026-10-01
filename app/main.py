@@ -39,16 +39,17 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.post(
     "/predict",
     response_model=PredictResponse,
-    summary="Esegui inferenza su uno spettro NIR",
+    summary="Esegui inferenza su uno spettro NIR o Raman",
     response_description="Predizione con label (fresco/decongelato) e probabilita'"
 )
 async def predict(request: PredictRequest):
     try:
+        spectrum_data = request.absorbance if request.measurement_type == "nir" else request.arbitrary_units
         label, probability = run_inference(
             measurement_type=request.measurement_type,
             tipo_di_campione=request.tipo_di_campione,
             specie_campione=request.specie_campione,
-            absorbance=request.absorbance
+            spectrum_values=spectrum_data
         )
         return PredictResponse(label=label, probability=probability)
     except FileNotFoundError as e:
