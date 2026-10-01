@@ -75,15 +75,13 @@ Il token segreto atteso può essere configurato tramite la variabile d'ambiente 
 
 ---
 
-## Esempio
+## Endpoint e Metodi API
 
-Di seguito vengono riportati esempi di richiesta HTTP POST all'endpoint `/predict` e della risposta restituita dal server.
+### 1. `POST /predict` (Inferenza)
 
-### Esempi di richiesta (cURL)
+Esegue l'inferenza su uno spettro NIR (`wavelength` e `absorbance`, 125 elementi) o Raman (`shift_raman` e `arbitrary_units`).
 
-#### 1. Spettro NIR
-Richiesta di inferenza su uno spettro NIR (parametri spettrali: `wavelength` e `absorbance`, 125 elementi):
-
+#### Esempio NIR (cURL):
 ```bash
 curl -X POST http://127.0.0.1:8000/predict \
   -H "Authorization: Bearer $TOKEN" \
@@ -97,9 +95,7 @@ curl -X POST http://127.0.0.1:8000/predict \
   }'
 ```
 
-#### 2. Spettro Raman
-Richiesta di inferenza su uno spettro Raman (parametri spettrali: `shift_raman` e `arbitrary_units`):
-
+#### Esempio Raman (cURL):
 ```bash
 curl -X POST http://127.0.0.1:8000/predict \
   -H "Authorization: Bearer $TOKEN" \
@@ -113,14 +109,103 @@ curl -X POST http://127.0.0.1:8000/predict \
   }'
 ```
 
-### Esempio di risposta (JSON)
+### Esempio di risposta JSON
 
-In caso di successo (HTTP 200 OK), il server restituisce la label del campione con la probabilità che il campione appartenga alla classe predetta (es. `fresco` o `decongelato` per il pesce; `non_csm` o `csm` per la carne):
+In caso di successo (HTTP 200 OK), il server restituisce la label del campione con la probabilità che il campione appartenga alla classe predetta (es. `fresco` o `decongelato` per il pesce; `non_csm` o `csm` per la carne).
 
+Per il pesce:
 ```json
 {
   "label": "decongelato",
   "probability": 0.842
+}
+```
+
+Per la carne:
+```json
+{
+  "label": "csm",
+  "probability": 0.756
+}
+```
+
+---
+
+### 2. `GET /health` (Health Check)
+
+Restituisce lo stato di salute del server e il numero di modelli attualmente caricati in memoria.
+
+```bash
+curl -X GET http://127.0.0.1:8000/health \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+#### Risposta JSON:
+```json
+{
+  "status": "healthy",
+  "version": "1.0.0",
+  "models_loaded_count": 1,
+  "models_loaded": [
+    "nir:pesce:polpo"
+  ]
+}
+```
+
+---
+
+### 3. `GET /supported-config` (Configurazioni Supportate)
+
+Restituisce la configurazione degli strumenti, tipi di campione, specie supportate e relative label predette dal modello.
+
+```bash
+curl -X GET http://127.0.0.1:8000/supported-config \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+#### Risposta JSON:
+```json
+{
+  "instruments": ["nir", "raman"],
+  "spectrum_lengths": {
+    "nir": 125
+  },
+  "sample_types": {
+    "pesce": {
+      "species": ["moscardino", "polpo", "seppia"],
+      "labels": ["fresco", "decongelato"]
+    },
+    "carne": {
+      "species": ["wurstel"],
+      "labels": ["non_csm", "csm"]
+    }
+  }
+}
+```
+
+---
+
+### 4. `GET /models` (Stato Modelli)
+
+Elenca i modelli configurati, indicando la presenza del file `.keras` e se il modello è già presente nella cache in memoria.
+
+```bash
+curl -X GET http://127.0.0.1:8000/models \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+#### Risposta JSON:
+```json
+{
+  "models": [
+    {
+      "measurement_type": "nir",
+      "tipo_di_campione": "pesce",
+      "specie_campione": "polpo",
+      "is_file_present": true,
+      "is_loaded_in_memory": true
+    }
+  ]
 }
 ```
 

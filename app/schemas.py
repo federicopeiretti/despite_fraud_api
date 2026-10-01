@@ -89,3 +89,28 @@ class PredictResponse(BaseModel):
     @classmethod
     def round_probability(cls, v: float) -> float:
         return round(float(v), 3)
+
+class HealthResponse(BaseModel):
+    status: str
+    version: str
+    models_loaded_count: int
+    models_loaded: List[str]
+
+class SampleTypeConfig(BaseModel):
+    species: List[str]
+    labels: List[str]
+
+class SupportedConfigResponse(BaseModel):
+    instruments: List[str]
+    spectrum_lengths: dict[str, int]
+    sample_types: dict[str, SampleTypeConfig]
+
+class ModelItemStatus(BaseModel):
+    measurement_type: str
+    tipo_di_campione: str
+    specie_campione: str
+    is_file_present: bool
+    is_loaded_in_memory: bool
+
+class ModelsListResponse(BaseModel):
+    models: List[ModelItemStatus]

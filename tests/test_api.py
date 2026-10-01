@@ -186,3 +186,42 @@ def test_polpo_lazy_loading_and_prediction():
     response_cached = client.post("/predict", json=payload)
     assert response_cached.status_code == 200
     assert response_cached.json() == data
+
+def test_get_health():
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"
+    assert "version" in data
+    assert "models_loaded_count" in data
+    assert isinstance(data["models_loaded"], list)
+
+def test_get_supported_config():
+    response = client.get("/supported-config")
+    assert response.status_code == 200
+    data = response.json()
+    assert "nir" in data["instruments"]
+    assert "raman" in data["instruments"]
+    assert data["spectrum_lengths"]["nir"] == 125
+    assert "pesce" in data["sample_types"]
+    assert "carne" in data["sample_types"]
+    assert "polpo" in data["sample_types"]["pesce"]["species"]
+    assert "wurstel" in data["sample_types"]["carne"]["species"]
+    assert "non_csm" in data["sample_types"]["carne"]["labels"]
+    assert "csm" in data["sample_types"]["carne"]["labels"]
+
+    # Test alias route /supported_config as well
+    response_alias = client.get("/supported_config")
+    assert response_alias.status_code == 200
+    assert response_alias.json() == data
+
+def test_get_models():
+    response = client.get("/models")
+    assert response.status_code == 200
+    data = response.json()
+    assert "models" in data
+    assert len(data["models"]) >= 1
+    # Octopus model should have is_file_present = True
+    octopus_entry = next((m for m in data["models"] if m["specie_campione"] == "polpo"), None)
+    assert octopus_entry is not None
+    assert octopus_entry["is_file_present"] is True
