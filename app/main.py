@@ -24,7 +24,7 @@ from app.auth import verify_token
 
 app = FastAPI(
     title="despite_fraud_API",
-    description="REST API per l'inferenza su dati spettroscopici NIR e Raman",
+    description="Servizio REST API per la classificazione di campioni alimentari tramite l'analisi spettroscopica e modelli di Machine Learning/Deep Learning. Per il pesce distingue il prodotto fresco da quello decongelato, mentre per la carne rileva la presenza di carne separata meccanicamente (CSM). Specifico per spettri acquisiti con strumenti NIR, Raman e SERS.",
     version="1.0.0",
     dependencies=[Depends(verify_token)]
 )
