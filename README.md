@@ -39,7 +39,7 @@ Viene caricato il modello corretto in base al tipo di strumento chemiometrico (N
 
 ---
 
-## Avvio del Server
+## Avvio del server
 
 Avvia il server di sviluppo tramite **Uvicorn**:
 
