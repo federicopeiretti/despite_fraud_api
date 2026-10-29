@@ -5,3 +5,6 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
+Guida_Despite_Fraud_API.docx
+~$*.docx
+~*.tmp
