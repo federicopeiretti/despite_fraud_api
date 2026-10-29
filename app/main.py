@@ -36,12 +36,14 @@ app = FastAPI(
     response_description="Stato operativo del servizio e modelli caricati in memoria"
 )
 async def health():
-    loaded_keys = [f"{k[0]}:{k[1]}:{k[2]}" for k in model_manager._models.keys()]
+    loaded_models = [
+        os.path.basename(MODEL_PATHS[k]) if k in MODEL_PATHS else f"{k[0]}:{k[1]}:{k[2]}"
+        for k in model_manager._models.keys()
+    ]
     return HealthResponse(
         status="healthy",
-        version="1.0.0",
-        models_loaded_count=len(loaded_keys),
-        models_loaded=loaded_keys
+        models_loaded_count=len(loaded_models),
+        models_loaded=loaded_models
     )
 
 @app.get(
@@ -79,6 +81,7 @@ async def get_models():
                 measurement_type=key[0],
                 tipo_di_campione=key[1],
                 specie_campione=key[2],
+                model_version=os.path.basename(path),
                 is_file_present=os.path.exists(path),
                 is_loaded_in_memory=key in model_manager._models
             )
@@ -114,19 +117,23 @@ async def global_exception_handler(request: Request, exc: Exception):
 @app.post(
     "/predict",
     response_model=PredictResponse,
-    summary="Esegui inferenza su uno spettro NIR o Raman",
-    response_description="Predizione con label e probabilitá"
+    summary="Esegui inferenza su uno spettro",
+    response_description="Predizione con label, probabilitá e versione del modello"
 )
 async def predict(request: PredictRequest):
     try:
         spectrum_data = request.absorbance if request.measurement_type == "nir" else request.arbitrary_units
-        label, probability = run_inference(
+        label, probability, model_version = run_inference(
             measurement_type=request.measurement_type,
             tipo_di_campione=request.tipo_di_campione,
             specie_campione=request.specie_campione,
             spectrum_values=spectrum_data
         )
-        return PredictResponse(label=label, probability=probability)
+        return PredictResponse(
+            label=label,
+            probability=probability,
+            model_version=model_version
+        )
     except FileNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

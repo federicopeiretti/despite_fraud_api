@@ -36,7 +36,7 @@ CLASSES_MAPPING = {
 # Centralized paths to the ensemble models
 MODEL_PATHS = {
     ("nir", "pesce", "polpo"): os.path.abspath(
-        os.path.join(BASE_DIR, "models", "octopus", "cnn_ensemble.keras")
+        os.path.join(BASE_DIR, "models", "micronir_path", "polpo", "cnn_micronir_path_polpo.keras")
     )
     # Future models for moscardino, seppia, wurstel or other instruments/animals can be added here
 }

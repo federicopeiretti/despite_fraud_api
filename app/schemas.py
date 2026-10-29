@@ -84,6 +84,7 @@ class PredictRequest(BaseModel):
 class PredictResponse(BaseModel):
     label: str
     probability: float
+    model_version: str
 
     @field_validator("probability")
     @classmethod
@@ -92,7 +93,6 @@ class PredictResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
-    version: str
     models_loaded_count: int
     models_loaded: List[str]
 
@@ -109,6 +109,7 @@ class ModelItemStatus(BaseModel):
     measurement_type: str
     tipo_di_campione: str
     specie_campione: str
+    model_version: str
     is_file_present: bool
     is_loaded_in_memory: bool
 

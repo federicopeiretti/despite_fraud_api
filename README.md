@@ -111,13 +111,14 @@ curl -X POST http://127.0.0.1:8000/predict \
 
 ### Esempio di risposta JSON
 
-In caso di successo (HTTP 200 OK), il server restituisce la label del campione con la probabilità che il campione appartenga alla classe predetta (es. `fresco` o `decongelato` per il pesce; `non_csm` o `csm` per la carne).
+In caso di successo (HTTP 200 OK), il server restituisce la label del campione con la probabilità che il campione appartenga alla classe predetta (es. `fresco` o `decongelato` per il pesce; `non_csm` o `csm` per la carne) e il nome del file del modello utilizzato (`model_version`).
 
 Per il pesce:
 ```json
 {
   "label": "decongelato",
-  "probability": 0.842
+  "probability": 0.842,
+  "model_version": "cnn_micronir_path_polpo.keras"
 }
 ```
 
@@ -125,7 +126,8 @@ Per la carne:
 ```json
 {
   "label": "csm",
-  "probability": 0.756
+  "probability": 0.756,
+  "model_version": "cnn_micronir_path_wurstel.keras"
 }
 ```
 
@@ -144,10 +146,9 @@ curl -X GET http://127.0.0.1:8000/health \
 ```json
 {
   "status": "healthy",
-  "version": "1.0.0",
   "models_loaded_count": 1,
   "models_loaded": [
-    "nir:pesce:polpo"
+    "cnn_micronir_path_polpo.keras"
   ]
 }
 ```
@@ -202,6 +203,7 @@ curl -X GET http://127.0.0.1:8000/models \
       "measurement_type": "nir",
       "tipo_di_campione": "pesce",
       "specie_campione": "polpo",
+      "model_version": "cnn_micronir_path_polpo.keras",
       "is_file_present": true,
       "is_loaded_in_memory": true
     }
@@ -215,7 +217,7 @@ curl -X GET http://127.0.0.1:8000/models \
 
 | Codice HTTP | Definizione | Descrizione / Causa | Esempio Body Risposta |
 | :--- | :--- | :--- | :--- |
-| **`200 OK`** | Successo | Inferenza eseguita con successo | `{"label": "decongelato", "probability": 0.842}` |
+| **`200 OK`** | Successo | Inferenza eseguita con successo | `{"label": "decongelato", "probability": 0.842, "model_version": "cnn_micronir_path_polpo.keras"}` |
 | **`400 Bad Request`** | Richiesta non valida | Parametri o combinazioni non gestibili durante l'inferenza | `{"detail": "Combinazione non supportata: ..."}` |
 | **`401 Unauthorized`** | Non autorizzato | Header `Authorization: Bearer $TOKEN` mancante o token non valido | `{"detail": "Token di autenticazione non valido o mancante."}` |
 | **`404 Not Found`** | Modello non trovato | Specie supportata ma file del modello non presente su disco | `{"detail": "Modello non trovato"}` |

@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from app.config import MODEL_PATHS, CLASSES_MAPPING
 from app.model_loader import model_manager
@@ -8,7 +9,7 @@ def run_inference(
     tipo_di_campione: str,
     specie_campione: str,
     spectrum_values: list[float]
-) -> tuple[str, float]:
+) -> tuple[str, float, str]:
     """
     Coordinates the full inference pipeline:
     1. Look up configured model path.
@@ -58,4 +59,5 @@ def run_inference(
 
     animal_map = CLASSES_MAPPING.get(tipo_di_campione.lower(), CLASSES_MAPPING.get("pesce", {}))
     label = animal_map.get(predicted_class_idx, "sconosciuto")
-    return label, round(probability, 3)
+    model_version = os.path.basename(model_path)
+    return label, round(probability, 3), model_version

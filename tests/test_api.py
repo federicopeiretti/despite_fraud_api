@@ -172,12 +172,14 @@ def test_polpo_lazy_loading_and_prediction():
     data = response.json()
     assert "label" in data
     assert "probability" in data
-    assert len(data) == 2  # Contain ONLY label and probability
+    assert "model_version" in data
+    assert len(data) == 3  # Contain label, probability and model_version
 
     # 3. Check types and ranges
     assert data["label"] in ["fresco", "decongelato"]
     assert isinstance(data["probability"], float)
     assert 0.5 <= data["probability"] <= 1.0
+    assert data["model_version"] == "cnn_micronir_path_polpo.keras"
     # Verifica massimo 3 cifre decimali
     decimal_part = str(data["probability"]).split(".")[1] if "." in str(data["probability"]) else ""
     assert len(decimal_part) <= 3
@@ -192,9 +194,9 @@ def test_get_health():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
-    assert "version" in data
     assert "models_loaded_count" in data
     assert isinstance(data["models_loaded"], list)
+    assert "cnn_micronir_path_polpo.keras" in data["models_loaded"]
 
 def test_get_supported_config():
     response = client.get("/supported-config")
@@ -221,7 +223,8 @@ def test_get_models():
     data = response.json()
     assert "models" in data
     assert len(data["models"]) >= 1
-    # Octopus model should have is_file_present = True
+    # Octopus model should have is_file_present = True and model_version set
     octopus_entry = next((m for m in data["models"] if m["specie_campione"] == "polpo"), None)
     assert octopus_entry is not None
+    assert octopus_entry["model_version"] == "cnn_micronir_path_polpo.keras"
     assert octopus_entry["is_file_present"] is True
